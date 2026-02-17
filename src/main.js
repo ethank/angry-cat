@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createLauncher } from './launcher.js';
+import { Player } from './player.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -14,6 +15,9 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 document.getElementById('game-canvas').appendChild(renderer.domElement);
 
+// Player
+const player = new Player(camera, scene, renderer.domElement);
+
 // Test cube
 const cube = new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),
@@ -21,6 +25,9 @@ const cube = new THREE.Mesh(
 );
 cube.position.set(0, 0.5, -3);
 scene.add(cube);
+
+// Collidables list (objects the player can collide with)
+const collidables = [cube];
 
 // Basic light
 const light = new THREE.DirectionalLight(0xffffff, 1);
@@ -42,12 +49,19 @@ window.addEventListener('resize', () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
+// Delta time clock
+const clock = new THREE.Clock();
+
 function animate() {
   requestAnimationFrame(animate);
+  const delta = clock.getDelta();
+  player.update(delta, collidables);
   renderer.render(scene, camera);
 }
 
 createLauncher(() => {
-  renderer.domElement.requestPointerLock();
+  player.lock();
   animate();
 });
+
+export { camera, scene, renderer, player, collidables };

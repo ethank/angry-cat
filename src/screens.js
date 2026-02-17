@@ -4,6 +4,8 @@
  * All DOM elements are created with createElement / textContent (no innerHTML).
  */
 
+import { isTouchDevice } from './touchControls.js';
+
 // ──────────────────────────────────────────────────────────────────────────────
 //  Win Screen
 // ──────────────────────────────────────────────────────────────────────────────
@@ -90,7 +92,13 @@ export class HelpOverlay {
     heading.textContent = 'CONTROLS';
     box.appendChild(heading);
 
-    const controls = [
+    const controls = isTouchDevice ? [
+      ['JOYSTICK', 'Move'],
+      ['SWIPE', 'Look around'],
+      ['SPRINT BTN', 'Sprint (uses stamina)'],
+      ['? BUTTON', 'Toggle this help'],
+      ['| | BUTTON', 'Pause game'],
+    ] : [
       ['W A S D', 'Move'],
       ['MOUSE', 'Look around'],
       ['SHIFT', 'Sprint (uses stamina)'],
@@ -135,8 +143,20 @@ export class HelpOverlay {
 
     const dismiss = document.createElement('p');
     dismiss.className = 'help-dismiss';
-    dismiss.textContent = 'Press H to close';
+    dismiss.textContent = isTouchDevice ? 'Tap ? to close' : 'Press H to close';
     box.appendChild(dismiss);
+
+    // Touch devices get a tappable CLOSE button
+    if (isTouchDevice) {
+      const closeBtn = document.createElement('button');
+      closeBtn.className = 'help-close-btn';
+      closeBtn.textContent = 'CLOSE';
+      closeBtn.addEventListener('click', () => this.hide());
+      box.appendChild(closeBtn);
+
+      // Make the overlay tappable on touch (normally pointer-events: none)
+      this.overlay.style.pointerEvents = 'auto';
+    }
 
     this.overlay.appendChild(box);
 
@@ -184,7 +204,7 @@ export class PauseMenu {
     inner.appendChild(heading);
 
     const hint = document.createElement('p');
-    hint.textContent = 'Click to resume';
+    hint.textContent = isTouchDevice ? 'Tap to resume' : 'Click to resume';
     inner.appendChild(hint);
 
     this.overlay.appendChild(inner);

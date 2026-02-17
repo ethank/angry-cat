@@ -10,6 +10,9 @@ html, body {
   overflow: hidden;
   background: #000;
   font-family: sans-serif;
+  touch-action: none;
+  overscroll-behavior: none;
+  -webkit-touch-callout: none;
 }
 
 canvas {
@@ -529,4 +532,153 @@ canvas {
 
 .startup-hint.hidden {
   opacity: 0;
+}
+
+/* ── Touch Controls (mobile/tablet) ── */
+
+.touch-controls {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 20;
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.touch-joystick {
+  position: fixed;
+  bottom: 40px;
+  left: 40px;
+  width: 120px;
+  height: 120px;
+  border-radius: 50%;
+  background: rgba(255, 50, 50, 0.08);
+  border: 2px solid rgba(255, 50, 50, 0.25);
+  pointer-events: auto;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.touch-joystick-knob {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  background: rgba(255, 50, 50, 0.3);
+  border: 2px solid rgba(255, 50, 50, 0.5);
+  box-shadow: 0 0 10px rgba(255, 50, 50, 0.2);
+  transition: none;
+  pointer-events: none;
+}
+
+.touch-look-area {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 60%;
+  height: 100%;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.touch-sprint-btn {
+  position: fixed;
+  bottom: 40px;
+  right: 40px;
+  width: 70px;
+  height: 70px;
+  border-radius: 50%;
+  background: rgba(255, 50, 50, 0.08);
+  border: 2px solid rgba(255, 50, 50, 0.25);
+  color: rgba(255, 50, 50, 0.6);
+  font-family: 'Creepster', cursive;
+  font-size: 0.65rem;
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.touch-sprint-btn.active {
+  background: rgba(255, 50, 50, 0.25);
+  border-color: rgba(255, 50, 50, 0.6);
+  color: #ff3333;
+  box-shadow: 0 0 15px rgba(255, 50, 50, 0.3);
+}
+
+.touch-pause-btn {
+  position: fixed;
+  top: 20px;
+  left: 20px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1rem;
+  font-family: monospace;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+.touch-help-btn {
+  position: fixed;
+  top: 20px;
+  right: 60px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 1.2rem;
+  font-family: 'Creepster', cursive;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: auto;
+  touch-action: none;
+}
+
+/* Close button inside help overlay for touch devices */
+.help-close-btn {
+  margin-top: 1rem;
+  padding: 0.6rem 2rem;
+  font-family: 'Creepster', cursive;
+  font-size: 1.1rem;
+  background: transparent;
+  border: 1px solid rgba(255, 50, 50, 0.4);
+  color: #ff6666;
+  border-radius: 6px;
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+/* Hide touch controls on desktop (fallback if JS detection misses) */
+@media (hover: hover) and (pointer: fine) {
+  .touch-controls {
+    display: none !important;
+  }
+}
+
+/* Adjust HUD on touch devices to avoid joystick overlap */
+@media (hover: none) and (pointer: coarse) {
+  .hud-stamina {
+    bottom: 180px;
+  }
+
+  .startup-hint {
+    bottom: 180px;
+  }
 }

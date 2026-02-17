@@ -1,3 +1,5 @@
+import { isTouchDevice } from './touchControls.js';
+
 export function createLauncher(onStart) {
   const launcher = document.getElementById('launcher');
 
@@ -41,7 +43,13 @@ export function createLauncher(onStart) {
   controlsTitle.textContent = 'CONTROLS';
   controlsBox.appendChild(controlsTitle);
 
-  const controlsList = [
+  const controlsList = isTouchDevice ? [
+    ['JOYSTICK', 'Move'],
+    ['SWIPE', 'Look around'],
+    ['SPRINT', 'Sprint'],
+    ['?', 'Help'],
+    ['| |', 'Pause'],
+  ] : [
     ['W A S D', 'Move'],
     ['MOUSE', 'Look around'],
     ['SHIFT', 'Sprint'],

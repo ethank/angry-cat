@@ -8,6 +8,7 @@ import { JumpScare } from './jumpScare.js';
 import { SoundManager } from './sounds.js';
 import { HUD } from './hud.js';
 import { WinScreen, PauseMenu, HelpOverlay } from './screens.js';
+import { isTouchDevice, TouchControls } from './touchControls.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -82,6 +83,9 @@ let gameRunning = false;
 // Whether the animate loop has been started (only start once)
 let animateStarted = false;
 
+// Touch controls instance (created on first game start, only on touch devices)
+let touchControls = null;
+
 /**
  * Determine which room the player is in based on their z-position.
  * Returns room index (0-3) or -1 if outside all rooms.
@@ -117,8 +121,14 @@ const helpOverlay = new HelpOverlay();
 
 // ── Pause Menu ──
 const pauseMenu = new PauseMenu(() => {
-  // Resume: re-request pointer lock
-  player.lock();
+  if (isTouchDevice) {
+    // On mobile, just hide pause and show touch controls again
+    pauseMenu.hide();
+    if (touchControls) touchControls.show();
+  } else {
+    // Desktop: re-request pointer lock
+    player.lock();
+  }
 });
 
 /**
@@ -132,8 +142,11 @@ document.addEventListener('keydown', (e) => {
 
 /**
  * Handle pointer lock changes for pause/resume.
+ * (Touch devices don't use pointer lock — they have an explicit pause button.)
  */
 document.addEventListener('pointerlockchange', () => {
+  if (isTouchDevice) return;
+
   const isLocked = document.pointerLockElement === renderer.domElement;
 
   if (isLocked) {
@@ -174,9 +187,10 @@ function triggerWin() {
     soundManager.stop('cat-hiss');
   }
 
-  // Hide pause and help overlays
+  // Hide pause, help, and touch overlays
   pauseMenu.hide();
   helpOverlay.hide();
+  if (touchControls) touchControls.hide();
 
   // Show win screen with final time
   winScreen.show(hud.getTimeString());
@@ -210,8 +224,9 @@ function resetGame() {
     soundManager.stop('cat-hiss');
   }
 
-  // Hide help overlay
+  // Hide help overlay and touch controls
   helpOverlay.hide();
+  if (touchControls) touchControls.hide();
 
   // Show the launcher again
   const launcher = document.getElementById('launcher');
@@ -255,10 +270,28 @@ function startGame() {
   // Reset the delta clock so the first frame doesn't get a huge delta
   clock.getDelta();
 
-  // Show startup hint: "WASD to move · SHIFT to sprint · H for help"
+  // Show startup hint (different text for touch vs desktop)
   showStartupHint();
 
-  player.lock();
+  if (isTouchDevice) {
+    // Mobile/tablet: skip pointer lock (unsupported on iOS), use touch controls
+    player.setMobileMode(true);
+
+    if (!touchControls) {
+      touchControls = new TouchControls({
+        player,
+        camera,
+        helpOverlay,
+        pauseMenu,
+        gameRunningFn: () => gameRunning,
+      });
+    } else {
+      touchControls.show();
+    }
+  } else {
+    // Desktop: use pointer lock for mouse look
+    player.lock();
+  }
 
   // Only start the animate loop once
   if (!animateStarted) {
@@ -345,7 +378,9 @@ function showStartupHint() {
 
   const hint = document.createElement('div');
   hint.className = 'startup-hint';
-  hint.textContent = 'WASD to move · SHIFT to sprint · H for help';
+  hint.textContent = isTouchDevice
+    ? 'Joystick to move · Hold SPRINT to run · Swipe to look'
+    : 'WASD to move · SHIFT to sprint · H for help';
   document.body.appendChild(hint);
 
   // Fade out after 4 seconds

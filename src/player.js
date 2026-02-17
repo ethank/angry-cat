@@ -31,6 +31,9 @@ export class Player {
     // Head bob
     this._headBobTimer = 0;
 
+    // Mobile mode — when true, movement updates run without pointer lock
+    this.mobileMode = false;
+
     // Footstep tracking
     this._stepTimer = 0;
     this.onStep = null; // callback(isSprinting)
@@ -77,8 +80,12 @@ export class Player {
     this.controls.lock();
   }
 
+  setMobileMode(enabled) {
+    this.mobileMode = enabled;
+  }
+
   update(delta, collidables) {
-    if (!this.controls.isLocked) return;
+    if (!this.controls.isLocked && !this.mobileMode) return;
 
     // Determine effective sprint state
     const sprinting = this.isSprinting;

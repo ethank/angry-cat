@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { createLauncher } from './launcher.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -45,4 +46,8 @@ function animate() {
   requestAnimationFrame(animate);
   renderer.render(scene, camera);
 }
-animate();
+
+createLauncher(() => {
+  renderer.domElement.requestPointerLock();
+  animate();
+});

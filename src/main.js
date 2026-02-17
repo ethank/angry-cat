@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createLauncher } from './launcher.js';
 import { Player } from './player.js';
 import { createHouse } from './house.js';
+import { LightingManager } from './lighting.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -22,8 +23,20 @@ const player = new Player(camera, scene, renderer.domElement);
 // Build the house
 const { rooms, collidables } = createHouse(scene);
 
-// Ambient light (low intensity, rooms have their own point lights)
-scene.add(new THREE.AmbientLight(0x404040, 0.6));
+// Atmospheric lighting — LightingManager provides dim ambient + per-room lights
+const lightingManager = new LightingManager(scene);
+
+// Kitchen: warm overhead light
+lightingManager.addRoomLight(new THREE.Vector3(0, 2.8, 0), 0xFFE4B5, 1.5, false);
+
+// Hallway: flickering light for tension
+lightingManager.addRoomLight(new THREE.Vector3(0, 2.8, -7), 0xFFFFAA, 1.0, true);
+
+// Living Room: dim lamp in the corner
+lightingManager.addRoomLight(new THREE.Vector3(-3, 2, -14), 0xFFD700, 0.6, false);
+
+// Bedroom: faint moonlight, very dark and scary
+lightingManager.addRoomLight(new THREE.Vector3(2, 2.8, -20), 0x4444FF, 0.3, false);
 
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -38,6 +51,7 @@ function animate() {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
   player.update(delta, collidables);
+  lightingManager.update(delta);
   renderer.render(scene, camera);
 }
 
@@ -46,4 +60,4 @@ createLauncher(() => {
   animate();
 });
 
-export { camera, scene, renderer, player, collidables, rooms };
+export { camera, scene, renderer, player, collidables, rooms, lightingManager };

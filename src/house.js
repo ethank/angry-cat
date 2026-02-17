@@ -171,29 +171,5 @@ export function createHouse(scene) {
     rooms.push(room);
   });
 
-  // Add lighting for each room area
-  addRoomLighting(scene);
-
   return { rooms, collidables: allCollidables };
-}
-
-/**
- * Adds point lights inside each room for interior illumination.
- */
-function addRoomLighting(scene) {
-  const roomCenters = [
-    { x: 0, z: 0 },     // Kitchen
-    { x: 0, z: -7 },    // Hallway
-    { x: 0, z: -14 },   // Living Room
-    { x: 0, z: -20 },   // Bedroom
-  ];
-
-  roomCenters.forEach(({ x, z }) => {
-    const light = new THREE.PointLight(0xFFE4B5, 0.8, 12);
-    light.position.set(x, 2.7, z);
-    light.castShadow = true;
-    light.shadow.mapSize.width = 512;
-    light.shadow.mapSize.height = 512;
-    scene.add(light);
-  });
 }

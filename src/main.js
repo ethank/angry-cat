@@ -7,7 +7,7 @@ import { Cat } from './cat.js';
 import { JumpScare } from './jumpScare.js';
 import { SoundManager } from './sounds.js';
 import { HUD } from './hud.js';
-import { WinScreen, PauseMenu } from './screens.js';
+import { WinScreen, PauseMenu, HelpOverlay } from './screens.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -112,10 +112,22 @@ const winScreen = new WinScreen(() => {
   resetGame();
 });
 
+// ── Help Overlay (H key) ──
+const helpOverlay = new HelpOverlay();
+
 // ── Pause Menu ──
 const pauseMenu = new PauseMenu(() => {
   // Resume: re-request pointer lock
   player.lock();
+});
+
+/**
+ * Handle H key for help overlay toggle.
+ */
+document.addEventListener('keydown', (e) => {
+  if (e.code === 'KeyH' && gameRunning) {
+    helpOverlay.toggle();
+  }
 });
 
 /**
@@ -162,8 +174,9 @@ function triggerWin() {
     soundManager.stop('cat-hiss');
   }
 
-  // Hide pause overlay (pointer lock loss would otherwise show it)
+  // Hide pause and help overlays
   pauseMenu.hide();
+  helpOverlay.hide();
 
   // Show win screen with final time
   winScreen.show(hud.getTimeString());
@@ -196,6 +209,9 @@ function resetGame() {
     soundManager.stop('cat-yowl');
     soundManager.stop('cat-hiss');
   }
+
+  // Hide help overlay
+  helpOverlay.hide();
 
   // Show the launcher again
   const launcher = document.getElementById('launcher');
@@ -238,6 +254,9 @@ function startGame() {
 
   // Reset the delta clock so the first frame doesn't get a huge delta
   clock.getDelta();
+
+  // Show startup hint: "WASD to move · SHIFT to sprint · H for help"
+  showStartupHint();
 
   player.lock();
 
@@ -314,6 +333,27 @@ function animate() {
 
   // --- Update jump scare (camera shake) ---
   jumpScare.update(delta);
+}
+
+/**
+ * Show a brief controls hint at the bottom of the screen, then fade out.
+ */
+function showStartupHint() {
+  // Remove any existing hint
+  const existing = document.querySelector('.startup-hint');
+  if (existing) existing.remove();
+
+  const hint = document.createElement('div');
+  hint.className = 'startup-hint';
+  hint.textContent = 'WASD to move · SHIFT to sprint · H for help';
+  document.body.appendChild(hint);
+
+  // Fade out after 4 seconds
+  setTimeout(() => {
+    hint.classList.add('hidden');
+    // Remove from DOM after fade completes
+    setTimeout(() => hint.remove(), 1000);
+  }, 4000);
 }
 
 /**

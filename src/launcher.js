@@ -32,6 +32,42 @@ export function createLauncher(onStart) {
   subtitle.textContent = "Don't wake the cat.";
   content.appendChild(subtitle);
 
+  // Controls info
+  const controlsBox = document.createElement('div');
+  controlsBox.className = 'launcher-controls';
+
+  const controlsTitle = document.createElement('p');
+  controlsTitle.className = 'launcher-controls-title';
+  controlsTitle.textContent = 'CONTROLS';
+  controlsBox.appendChild(controlsTitle);
+
+  const controlsList = [
+    ['W A S D', 'Move'],
+    ['MOUSE', 'Look around'],
+    ['SHIFT', 'Sprint'],
+    ['H', 'Help'],
+    ['ESC', 'Pause'],
+  ];
+
+  controlsList.forEach(([key, action]) => {
+    const row = document.createElement('div');
+    row.className = 'launcher-controls-row';
+
+    const keyEl = document.createElement('span');
+    keyEl.className = 'launcher-key';
+    keyEl.textContent = key;
+    row.appendChild(keyEl);
+
+    const actionEl = document.createElement('span');
+    actionEl.className = 'launcher-action';
+    actionEl.textContent = action;
+    row.appendChild(actionEl);
+
+    controlsBox.appendChild(row);
+  });
+
+  content.appendChild(controlsBox);
+
   const playBtn = document.createElement('button');
   playBtn.className = 'play-btn';
   playBtn.textContent = 'PLAY';

@@ -4,6 +4,7 @@ import { Player } from './player.js';
 import { createHouse } from './house.js';
 import { LightingManager } from './lighting.js';
 import { Cat } from './cat.js';
+import { JumpScare } from './jumpScare.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -41,6 +42,9 @@ lightingManager.addRoomLight(new THREE.Vector3(2, 2.8, -20), 0x4444FF, 0.3, fals
 
 // Cat AI
 const cat = new Cat(scene);
+
+// Jump scare system
+const jumpScare = new JumpScare(camera);
 
 // Aggression multiplier per room: escalates as the player goes deeper
 const ROOM_AGGRESSION = [1.0, 1.3, 1.6, 2.0];
@@ -125,6 +129,9 @@ function animate() {
   // --- Update cat AI ---
   cat.update(delta, player.position, player.isSprinting);
 
+  // --- Update jump scare (camera shake) ---
+  jumpScare.update(delta);
+
   renderer.render(scene, camera);
 }
 
@@ -136,7 +143,15 @@ async function init() {
 
   // Set the jump scare callback
   cat.onJumpScare = () => {
-    console.log('JUMP SCARE!');
+    jumpScare.trigger();
+  };
+
+  // Set the respawn callback
+  jumpScare.onRespawn = () => {
+    const room = rooms[currentRoomIndex];
+    player.position.set(room.spawnPoint.x, room.spawnPoint.y, room.spawnPoint.z);
+    cat.setupForRoom(currentRoomIndex, room.catHidingSpots, ROOM_AGGRESSION[currentRoomIndex]);
+    player.stamina = 1;
   };
 
   createLauncher(() => {
@@ -147,4 +162,4 @@ async function init() {
 
 init();
 
-export { camera, scene, renderer, player, collidables, rooms, lightingManager, cat };
+export { camera, scene, renderer, player, collidables, rooms, lightingManager, cat, jumpScare };

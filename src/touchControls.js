@@ -18,7 +18,9 @@ import { Euler } from 'three';
  */
 export const isTouchDevice = (
   'ontouchstart' in window ||
-  navigator.maxTouchPoints > 0
+  navigator.maxTouchPoints > 0 ||
+  window.matchMedia('(pointer: coarse)').matches ||
+  /iPhone|iPad|iPod|Android/i.test(navigator.userAgent)
 );
 
 // ── Constants ────────────────────────────────────────────────────────────────

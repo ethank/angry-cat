@@ -37,6 +37,11 @@ export function createLauncher(onStart) {
   playBtn.textContent = 'PLAY';
   content.appendChild(playBtn);
 
+  const credits = document.createElement('p');
+  credits.className = 'launcher-credits';
+  credits.textContent = 'Made with Three.js';
+  content.appendChild(credits);
+
   bg.appendChild(content);
   launcher.appendChild(bg);
 

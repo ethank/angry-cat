@@ -5,6 +5,7 @@ import { createHouse } from './house.js';
 import { LightingManager } from './lighting.js';
 import { Cat } from './cat.js';
 import { JumpScare } from './jumpScare.js';
+import { SoundManager } from './sounds.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -62,6 +63,9 @@ const ROOM_Z_BOUNDS = [
   { minZ: -23, maxZ: -17 },  // 3: Bedroom
 ];
 
+// Sound manager — initialized after user click (Web Audio requires gesture)
+let soundManager = null;
+
 // Track which room the player is currently in (-1 = none/unknown)
 let currentRoomIndex = -1;
 // Track whether the cat has been activated in the current room
@@ -109,8 +113,12 @@ function animate() {
   // --- Room detection ---
   const roomIndex = getRoomIndexForPosition(player.position);
 
-  // Player entered a new room — set up the cat
+  // Player entered a new room — set up the cat and play door creak
   if (roomIndex !== -1 && roomIndex !== currentRoomIndex) {
+    // Play door creak on room transitions (not on the very first room detection)
+    if (currentRoomIndex !== -1 && soundManager) {
+      soundManager.play('door-creak');
+    }
     currentRoomIndex = roomIndex;
     catActivatedInRoom = false;
     const room = rooms[roomIndex];
@@ -129,6 +137,14 @@ function animate() {
   // --- Update cat AI ---
   cat.update(delta, player.position, player.isSprinting);
 
+  // --- Update positional cat growl ---
+  if (soundManager) {
+    soundManager.updateCatGrowl(
+      cat.state === 'stalking',
+      cat.model ? cat.model.position : null
+    );
+  }
+
   // --- Update jump scare (camera shake) ---
   jumpScare.update(delta);
 
@@ -141,8 +157,12 @@ function animate() {
 async function init() {
   await cat.load();
 
-  // Set the jump scare callback
+  // Set the jump scare callback — play the cat yowl before triggering
   cat.onJumpScare = () => {
+    if (soundManager) {
+      soundManager.play('cat-yowl');
+      soundManager.play('cat-hiss');
+    }
     jumpScare.trigger();
   };
 
@@ -152,9 +172,37 @@ async function init() {
     player.position.set(room.spawnPoint.x, room.spawnPoint.y, room.spawnPoint.z);
     cat.setupForRoom(currentRoomIndex, room.catHidingSpots, ROOM_AGGRESSION[currentRoomIndex]);
     player.stamina = 1;
+    // Stop any lingering cat sounds on respawn
+    if (soundManager) {
+      soundManager.stop('cat-growl');
+      soundManager.stop('cat-yowl');
+      soundManager.stop('cat-hiss');
+    }
   };
 
   createLauncher(() => {
+    // Initialize sound system AFTER user click (Web Audio requires gesture)
+    soundManager = new SoundManager(camera);
+    soundManager.generateProceduralSounds();
+
+    // Ensure the AudioContext is resumed (some browsers suspend until gesture)
+    if (soundManager.audioContext.state === 'suspended') {
+      soundManager.audioContext.resume();
+    }
+
+    // Add the growl anchor to the scene so positional audio works
+    scene.add(soundManager._growlAnchor);
+
+    // Start ambient background loop
+    soundManager.play('ambient');
+
+    // Wire footstep sounds to the player step callback
+    player.onStep = (isSprinting) => {
+      const room = rooms[currentRoomIndex];
+      const floorType = room ? room.floorType : 'tile';
+      soundManager.playFootstep(floorType);
+    };
+
     player.lock();
     animate();
   });
@@ -162,4 +210,4 @@ async function init() {
 
 init();
 
-export { camera, scene, renderer, player, collidables, rooms, lightingManager, cat, jumpScare };
+export { camera, scene, renderer, player, collidables, rooms, lightingManager, cat, jumpScare, soundManager };

@@ -6,6 +6,8 @@ import { LightingManager } from './lighting.js';
 import { Cat } from './cat.js';
 import { JumpScare } from './jumpScare.js';
 import { SoundManager } from './sounds.js';
+import { HUD } from './hud.js';
+import { WinScreen, PauseMenu } from './screens.js';
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x111111);
@@ -47,6 +49,9 @@ const cat = new Cat(scene);
 // Jump scare system
 const jumpScare = new JumpScare(camera);
 
+// HUD
+const hud = new HUD();
+
 // Aggression multiplier per room: escalates as the player goes deeper
 const ROOM_AGGRESSION = [1.0, 1.3, 1.6, 2.0];
 
@@ -70,6 +75,12 @@ let soundManager = null;
 let currentRoomIndex = -1;
 // Track whether the cat has been activated in the current room
 let catActivatedInRoom = false;
+
+// Game state: controls whether game logic updates run
+let gameRunning = false;
+
+// Whether the animate loop has been started (only start once)
+let animateStarted = false;
 
 /**
  * Determine which room the player is in based on their z-position.
@@ -95,6 +106,36 @@ function isInsideTriggerZone(position, zone) {
   );
 }
 
+// ── Win Screen ──
+const winScreen = new WinScreen(() => {
+  // PLAY AGAIN callback: full reset
+  resetGame();
+});
+
+// ── Pause Menu ──
+const pauseMenu = new PauseMenu(() => {
+  // Resume: re-request pointer lock
+  player.lock();
+});
+
+/**
+ * Handle pointer lock changes for pause/resume.
+ */
+document.addEventListener('pointerlockchange', () => {
+  const isLocked = document.pointerLockElement === renderer.domElement;
+
+  if (isLocked) {
+    // Pointer lock acquired — hide pause, ensure game is running
+    pauseMenu.hide();
+  } else {
+    // Pointer lock lost — show pause if the game is still running
+    // (Don't show pause during win screen or before game starts)
+    if (gameRunning && !jumpScare.isActive) {
+      pauseMenu.show();
+    }
+  }
+});
+
 window.addEventListener('resize', () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
@@ -104,11 +145,125 @@ window.addEventListener('resize', () => {
 // Delta time clock
 const clock = new THREE.Clock();
 
+/**
+ * Trigger win state: player escaped!
+ */
+function triggerWin() {
+  gameRunning = false;
+
+  // Exit pointer lock
+  document.exitPointerLock();
+
+  // Stop sounds
+  if (soundManager) {
+    soundManager.stop('ambient');
+    soundManager.stop('cat-growl');
+    soundManager.stop('cat-yowl');
+    soundManager.stop('cat-hiss');
+  }
+
+  // Hide pause overlay (pointer lock loss would otherwise show it)
+  pauseMenu.hide();
+
+  // Show win screen with final time
+  winScreen.show(hud.getTimeString());
+}
+
+/**
+ * Full game reset for PLAY AGAIN.
+ * Resets player, cat, HUD, sounds, game state, and shows the launcher.
+ */
+function resetGame() {
+  // Reset game state
+  gameRunning = false;
+  currentRoomIndex = -1;
+  catActivatedInRoom = false;
+
+  // Reset player to kitchen spawn
+  player.position.set(0, 1.6, 2);
+  player.stamina = 1;
+
+  // Reset cat
+  cat.reset();
+
+  // Reset HUD
+  hud.reset();
+
+  // Stop all sounds
+  if (soundManager) {
+    soundManager.stop('ambient');
+    soundManager.stop('cat-growl');
+    soundManager.stop('cat-yowl');
+    soundManager.stop('cat-hiss');
+  }
+
+  // Show the launcher again
+  const launcher = document.getElementById('launcher');
+  launcher.style.display = '';
+  launcher.classList.remove('fade-out');
+  launcher.style.opacity = '';
+}
+
+/**
+ * Start the game (called from launcher onStart callback).
+ */
+function startGame() {
+  gameRunning = true;
+  currentRoomIndex = -1;
+  catActivatedInRoom = false;
+
+  // Initialize sound system AFTER user click (Web Audio requires gesture)
+  if (!soundManager) {
+    soundManager = new SoundManager(camera);
+    soundManager.generateProceduralSounds();
+
+    // Add the growl anchor to the scene so positional audio works
+    scene.add(soundManager._growlAnchor);
+  }
+
+  // Ensure the AudioContext is resumed (some browsers suspend until gesture)
+  if (soundManager.audioContext.state === 'suspended') {
+    soundManager.audioContext.resume();
+  }
+
+  // Start ambient background loop
+  soundManager.play('ambient');
+
+  // Wire footstep sounds to the player step callback
+  player.onStep = () => {
+    const room = rooms[currentRoomIndex];
+    const floorType = room ? room.floorType : 'tile';
+    soundManager.playFootstep(floorType);
+  };
+
+  // Reset the delta clock so the first frame doesn't get a huge delta
+  clock.getDelta();
+
+  player.lock();
+
+  // Only start the animate loop once
+  if (!animateStarted) {
+    animateStarted = true;
+    animate();
+  }
+}
+
 function animate() {
   requestAnimationFrame(animate);
   const delta = clock.getDelta();
-  player.update(delta, collidables);
+
+  // Always render and update lighting (even when paused for visual continuity)
   lightingManager.update(delta);
+  renderer.render(scene, camera);
+
+  // Skip game logic when not running (paused, win screen, etc.)
+  if (!gameRunning) return;
+
+  player.update(delta, collidables);
+
+  // --- HUD updates ---
+  hud.updateStamina(player.stamina, player.isSprinting);
+  hud.updateTimer(delta);
 
   // --- Room detection ---
   const roomIndex = getRoomIndexForPosition(player.position);
@@ -123,6 +278,18 @@ function animate() {
     catActivatedInRoom = false;
     const room = rooms[roomIndex];
     cat.setupForRoom(roomIndex, room.catHidingSpots, ROOM_AGGRESSION[roomIndex]);
+
+    // Show room name on HUD
+    hud.showRoomName(room.name);
+  }
+
+  // --- Win condition: player reaches bedroom exit zone ---
+  if (roomIndex === 3) {
+    const bedroom = rooms[3];
+    if (bedroom.exitZone && isInsideTriggerZone(player.position, bedroom.exitZone)) {
+      triggerWin();
+      return; // Stop processing this frame
+    }
   }
 
   // --- Cat trigger zone check ---
@@ -147,8 +314,6 @@ function animate() {
 
   // --- Update jump scare (camera shake) ---
   jumpScare.update(delta);
-
-  renderer.render(scene, camera);
 }
 
 /**
@@ -180,32 +345,7 @@ async function init() {
     }
   };
 
-  createLauncher(() => {
-    // Initialize sound system AFTER user click (Web Audio requires gesture)
-    soundManager = new SoundManager(camera);
-    soundManager.generateProceduralSounds();
-
-    // Ensure the AudioContext is resumed (some browsers suspend until gesture)
-    if (soundManager.audioContext.state === 'suspended') {
-      soundManager.audioContext.resume();
-    }
-
-    // Add the growl anchor to the scene so positional audio works
-    scene.add(soundManager._growlAnchor);
-
-    // Start ambient background loop
-    soundManager.play('ambient');
-
-    // Wire footstep sounds to the player step callback
-    player.onStep = (isSprinting) => {
-      const room = rooms[currentRoomIndex];
-      const floorType = room ? room.floorType : 'tile';
-      soundManager.playFootstep(floorType);
-    };
-
-    player.lock();
-    animate();
-  });
+  createLauncher(startGame);
 }
 
 init();

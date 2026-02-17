@@ -29,7 +29,7 @@ export function createLauncher(onStart) {
 
   const subtitle = document.createElement('p');
   subtitle.className = 'subtitle';
-  subtitle.textContent = "Don't wake the cat.";
+  subtitle.textContent = "Spencer is having his crazy time.";
   content.appendChild(subtitle);
 
   // Controls info
@@ -75,7 +75,7 @@ export function createLauncher(onStart) {
 
   const credits = document.createElement('p');
   credits.className = 'launcher-credits';
-  credits.textContent = 'Made with Three.js';
+  credits.textContent = 'Made for Ada Kaplan';
   content.appendChild(credits);
 
   bg.appendChild(content);

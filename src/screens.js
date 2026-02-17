@@ -27,7 +27,7 @@ export class WinScreen {
     // Subtitle
     const subtitle = document.createElement('p');
     subtitle.className = 'subtitle';
-    subtitle.textContent = 'The cat goes back to sleep... for now.';
+    subtitle.textContent = 'Spencer goes back to sleep... for now.';
     this.overlay.appendChild(subtitle);
 
     // Time display
@@ -121,7 +121,7 @@ export class HelpOverlay {
     box.appendChild(tipsHeading);
 
     const tips = [
-      "Don't sprint — the cat hears you!",
+      "Don't sprint — Spencer hears you!",
       'Watch for glowing green eyes in the dark.',
       'Reach the green exit door to escape.',
     ];

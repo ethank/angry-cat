@@ -1,8 +1,8 @@
 const deathMessages = [
-  'The cat got you.',
+  'Spencer got you!',
   'You should have been quieter.',
-  'Cats always win.',
-  'That cat is REALLY angry.',
+  'Spencer always wins.',
+  'Spencer is REALLY having his crazy time!',
   'Maybe try tiptoeing next time?',
 ];
 

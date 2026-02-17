@@ -7,7 +7,7 @@ import { Cat } from './cat.js';
 import { JumpScare } from './jumpScare.js';
 import { SoundManager } from './sounds.js';
 import { HUD } from './hud.js';
-import { WinScreen, PauseMenu, HelpOverlay } from './screens.js';
+import { WinScreen, PauseMenu, HelpOverlay, GameOverScreen } from './screens.js';
 import { isTouchDevice, TouchControls } from './touchControls.js';
 
 const scene = new THREE.Scene();
@@ -80,6 +80,10 @@ let catActivatedInRoom = false;
 // Game state: controls whether game logic updates run
 let gameRunning = false;
 
+// Lives system — 3 hits before game over
+const MAX_LIVES = 3;
+let lives = MAX_LIVES;
+
 // Whether the animate loop has been started (only start once)
 let animateStarted = false;
 
@@ -113,6 +117,12 @@ function isInsideTriggerZone(position, zone) {
 // ── Win Screen ──
 const winScreen = new WinScreen(() => {
   // PLAY AGAIN callback: full reset
+  resetGame();
+});
+
+// ── Game Over Screen ──
+const gameOverScreen = new GameOverScreen(() => {
+  // TRY AGAIN callback: full reset
   resetGame();
 });
 
@@ -197,7 +207,33 @@ function triggerWin() {
 }
 
 /**
- * Full game reset for PLAY AGAIN.
+ * Trigger game over: Spencer got all 3 lives.
+ */
+function triggerGameOver() {
+  gameRunning = false;
+
+  // Exit pointer lock
+  document.exitPointerLock();
+
+  // Stop sounds
+  if (soundManager) {
+    soundManager.stop('ambient');
+    soundManager.stop('cat-growl');
+    soundManager.stop('cat-yowl');
+    soundManager.stop('cat-hiss');
+  }
+
+  // Hide pause, help, and touch overlays
+  pauseMenu.hide();
+  helpOverlay.hide();
+  if (touchControls) touchControls.hide();
+
+  // Show game over screen
+  gameOverScreen.show();
+}
+
+/**
+ * Full game reset for PLAY AGAIN / TRY AGAIN.
  * Resets player, cat, HUD, sounds, game state, and shows the launcher.
  */
 function resetGame() {
@@ -205,6 +241,7 @@ function resetGame() {
   gameRunning = false;
   currentRoomIndex = -1;
   catActivatedInRoom = false;
+  lives = MAX_LIVES;
 
   // Reset player to kitchen spawn
   player.position.set(0, 1.6, 2);
@@ -224,8 +261,9 @@ function resetGame() {
     soundManager.stop('cat-hiss');
   }
 
-  // Hide help overlay and touch controls
+  // Hide overlays and touch controls
   helpOverlay.hide();
+  gameOverScreen.hide();
   if (touchControls) touchControls.hide();
 
   // Show the launcher again
@@ -242,6 +280,8 @@ function startGame() {
   gameRunning = true;
   currentRoomIndex = -1;
   catActivatedInRoom = false;
+  lives = MAX_LIVES;
+  hud.updateLives(lives);
 
   // Initialize sound system AFTER user click (Web Audio requires gesture)
   if (!soundManager) {
@@ -397,17 +437,33 @@ function showStartupHint() {
 async function init() {
   await cat.load();
 
-  // Set the jump scare callback — play the cat yowl before triggering
+  // Set the jump scare callback — subtract a life, trigger hit or game over
   cat.onJumpScare = () => {
     if (soundManager) {
       soundManager.play('cat-yowl');
       soundManager.play('cat-hiss');
     }
-    jumpScare.trigger();
+
+    lives--;
+    hud.updateLives(lives);
+
+    if (lives <= 0) {
+      // Final life lost — full death sequence, then game over
+      jumpScare.trigger();
+    } else {
+      // Still have lives — short hit scare, then respawn in room
+      jumpScare.triggerHit();
+    }
   };
 
   // Set the respawn callback
   jumpScare.onRespawn = () => {
+    // If no lives left, show game over instead of respawning
+    if (lives <= 0) {
+      triggerGameOver();
+      return;
+    }
+
     const room = rooms[currentRoomIndex];
     player.position.set(room.spawnPoint.x, room.spawnPoint.y, room.spawnPoint.z);
     cat.setupForRoom(currentRoomIndex, room.catHidingSpots, ROOM_AGGRESSION[currentRoomIndex]);

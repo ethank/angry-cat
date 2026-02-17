@@ -12,6 +12,19 @@ export class HUD {
     // ── Root container ──
     this.root = document.getElementById('hud');
 
+    // ── Lives display ──
+    this.livesWrap = document.createElement('div');
+    this.livesWrap.className = 'hud-lives';
+    this._livesHearts = [];
+    for (let i = 0; i < 3; i++) {
+      const heart = document.createElement('span');
+      heart.className = 'hud-heart';
+      heart.textContent = '\u2764'; // ❤
+      this.livesWrap.appendChild(heart);
+      this._livesHearts.push(heart);
+    }
+    this.root.appendChild(this.livesWrap);
+
     // ── Stamina bar ──
     this.staminaWrap = document.createElement('div');
     this.staminaWrap.className = 'hud-stamina';
@@ -100,6 +113,20 @@ export class HUD {
   }
 
   /**
+   * Update the lives display.
+   * @param {number} lives  Current number of lives (0..3)
+   */
+  updateLives(lives) {
+    for (let i = 0; i < this._livesHearts.length; i++) {
+      if (i < lives) {
+        this._livesHearts[i].classList.remove('lost');
+      } else {
+        this._livesHearts[i].classList.add('lost');
+      }
+    }
+  }
+
+  /**
    * Reset the timer to zero.
    */
   reset() {
@@ -108,6 +135,7 @@ export class HUD {
     this.staminaWrap.classList.remove('visible');
     this.staminaBar.style.width = '100%';
     this.roomName.classList.remove('visible');
+    this.updateLives(3);
     if (this._roomNameTimeout) {
       clearTimeout(this._roomNameTimeout);
       this._roomNameTimeout = null;

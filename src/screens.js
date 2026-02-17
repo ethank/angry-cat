@@ -227,3 +227,57 @@ export class PauseMenu {
     this.overlay.style.display = 'none';
   }
 }
+
+// ──────────────────────────────────────────────────────────────────────────────
+//  Game Over Screen
+// ──────────────────────────────────────────────────────────────────────────────
+
+export class GameOverScreen {
+  /**
+   * @param {Function} onTryAgain  Called when the player clicks "TRY AGAIN"
+   */
+  constructor(onTryAgain) {
+    this.onTryAgain = onTryAgain;
+
+    // Root overlay
+    this.overlay = document.createElement('div');
+    this.overlay.className = 'gameover-screen';
+
+    // Title
+    const heading = document.createElement('h1');
+    heading.textContent = 'GAME OVER';
+    this.overlay.appendChild(heading);
+
+    // Subtitle
+    const subtitle = document.createElement('p');
+    subtitle.className = 'subtitle';
+    subtitle.textContent = 'Spencer wins this round.';
+    this.overlay.appendChild(subtitle);
+
+    // Try Again button
+    const btn = document.createElement('button');
+    btn.className = 'try-again-btn';
+    btn.textContent = 'TRY AGAIN';
+    btn.addEventListener('click', () => {
+      this.hide();
+      if (this.onTryAgain) this.onTryAgain();
+    });
+    this.overlay.appendChild(btn);
+
+    // Hidden by default
+    this.overlay.style.display = 'none';
+    document.body.appendChild(this.overlay);
+  }
+
+  show() {
+    this.overlay.style.display = 'flex';
+    this.overlay.style.opacity = '0';
+    this.overlay.offsetHeight;
+    this.overlay.style.opacity = '1';
+  }
+
+  hide() {
+    this.overlay.style.display = 'none';
+    this.overlay.style.opacity = '0';
+  }
+}

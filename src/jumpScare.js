@@ -31,6 +31,46 @@ export class JumpScare {
     }
   }
 
+  /**
+   * Trigger a hit scare — red flash + shake, then respawn. No death screen.
+   * Used when the player still has lives remaining.
+   */
+  triggerHit() {
+    if (this.isActive) return;
+    this.isActive = true;
+
+    // Show overlay with red flash
+    this.overlay.style.display = 'flex';
+    this._clearOverlay();
+
+    const flash = document.createElement('div');
+    flash.className = 'jumpscare-flash';
+    this.overlay.appendChild(flash);
+
+    // Force reflow then add active class to trigger animation
+    flash.offsetHeight;
+    flash.classList.add('active');
+
+    // Set camera shake parameters
+    this.shakeIntensity = 0.12;
+    this.shakeDuration = 0.4;
+
+    // After 800ms: hide and respawn (shorter than full death)
+    setTimeout(() => {
+      this.overlay.style.display = 'none';
+      this._clearOverlay();
+      this.isActive = false;
+
+      if (this.onRespawn) {
+        this.onRespawn();
+      }
+    }, 800);
+  }
+
+  /**
+   * Trigger the full death sequence — red flash, death screen message, then respawn.
+   * Used for the final life (game over).
+   */
   trigger() {
     if (this.isActive) return;
     this.isActive = true;
